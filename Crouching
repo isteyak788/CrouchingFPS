@@ -1,0 +1,69 @@
+using System.Collections;
+using UnityEngine;
+
+public class Crouching : MonoBehaviour
+{
+    public float standingHeight = 2.0f; // Default standing height
+    public float crouchingHeight = 1.0f; // Crouching camera height
+    public float raycastDistance = 10.0f; // Distance to perform the raycast
+    public LayerMask groundLayer; // Layer to consider as ground
+    public float transitionTime = 0.5f; // Transition time in seconds
+
+    private Camera mainCamera;
+    private bool isCrouching = false;
+
+    void Start()
+    {
+        mainCamera = Camera.main; // Get the main camera
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftControl) && !isCrouching)
+        {
+            StartCoroutine(CrouchSmooth());
+        }
+        else if (Input.GetKeyUp(KeyCode.LeftControl) && isCrouching)
+        {
+            StartCoroutine(StandUpSmooth());
+        }
+    }
+
+    IEnumerator CrouchSmooth()
+    {
+        isCrouching = true;
+        float elapsedTime = 0f;
+        Vector3 startHeight = mainCamera.transform.position;
+        Vector3 targetHeight = new Vector3(mainCamera.transform.position.x, mainCamera.transform.position.y - (standingHeight - crouchingHeight), mainCamera.transform.position.z);
+
+        while (elapsedTime < transitionTime)
+        {
+            mainCamera.transform.position = Vector3.Lerp(startHeight, targetHeight, elapsedTime / transitionTime);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        mainCamera.transform.position = targetHeight;
+    }
+
+    IEnumerator StandUpSmooth()
+    {
+        // Perform a raycast from the camera's position downward
+        if (Physics.Raycast(mainCamera.transform.position, Vector3.down, out RaycastHit hit, raycastDistance, groundLayer))
+        {
+            isCrouching = false;
+            float elapsedTime = 0f;
+            Vector3 startHeight = mainCamera.transform.position;
+            Vector3 targetHeight = new Vector3(mainCamera.transform.position.x, hit.point.y + standingHeight, mainCamera.transform.position.z);
+
+            while (elapsedTime < transitionTime)
+            {
+                mainCamera.transform.position = Vector3.Lerp(startHeight, targetHeight, elapsedTime / transitionTime);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+
+            mainCamera.transform.position = targetHeight;
+        }
+    }
+}
